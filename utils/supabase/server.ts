@@ -1,0 +1,19 @@
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+export async function createClient() {
+  if (!url || !key) throw new Error("Supabase 환경 변수가 설정되지 않았습니다.");
+  const cookieStore = await cookies();
+  return createServerClient(url, key, {
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll(cookiesToSet) {
+        try { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)); }
+        catch { /* Server Component에서는 middleware가 세션 쿠키를 갱신합니다. */ }
+      },
+    },
+  });
+}
