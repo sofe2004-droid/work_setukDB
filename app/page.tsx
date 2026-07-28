@@ -17,6 +17,7 @@ export default function Home() {
     [count, setCount] = useState("1"),
     [results, setResults] = useState<SubjectResult[]>([]),
     [history, setHistory] = useState<SavedDraft[]>([]),
+    [historyCount, setHistoryCount] = useState(0),
     [edits, setEdits] = useState<Record<string, string>>({}),
     [search, setSearch] = useState(""),
     [msg, setMsg] = useState(""),
@@ -26,6 +27,7 @@ export default function Home() {
   useEffect(() => {
     setKey(localStorage.getItem("gemini_api_key") || "");
     setModel(localStorage.getItem("gemini_model") || MODEL);
+    loadHistoryCount();
   }, []);
   const rows = useMemo(
     () => history.filter((x) => x.student_id.includes(search)),
@@ -48,6 +50,13 @@ export default function Home() {
     setApiOpen(false);
     toastMsg("Gemini API 설정을 저장했습니다.");
   };
+  async function loadHistoryCount() {
+    if (!supabase) return;
+    const { count, error } = await supabase
+      .from("setuk_drafts")
+      .select("id", { count: "exact", head: true });
+    if (!error) setHistoryCount(count || 0);
+  }
   async function create() {
     if (!subs.length)
       return setMsg("세특 초안을 생성하려면 과목을 선택하세요.");
@@ -101,6 +110,7 @@ export default function Home() {
     if (error) setMsg(error.message);
     else {
       setHistory((previous) => [...(data as SavedDraft[]), ...previous]);
+      setHistoryCount((current) => current + (data?.length || 0));
       toastMsg("Supabase에 저장했습니다.");
     }
   }
@@ -115,6 +125,7 @@ export default function Home() {
     else {
       const a = (data || []) as SavedDraft[];
       setHistory(a);
+      setHistoryCount(a.length);
       setEdits(Object.fromEntries(a.map((x) => [x.id, x.reviewed_text])));
     }
   }
@@ -139,7 +150,7 @@ export default function Home() {
             세특 작성
           </button>
           <button className={view === "history" ? "active" : ""} onClick={load}>
-            저장 내역 <b>{history.length}</b>
+            저장 내역 <b>{historyCount}</b>
           </button>
           <hr />
           <button onClick={() => setApiOpen(true)}>API 키 입력</button>
