@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { SavedDraft, SubjectResult } from "@/lib/types";
+import styles from "./page-tweaks.module.css";
 const SUBJECTS = ["국어", "수학", "영어", "과학", "사회"],
   MODEL = "gemini-3.5-flash-lite";
 export default function Home() {
@@ -82,7 +83,7 @@ export default function Home() {
   }
   async function save() {
     if (!supabase || !id) return setMsg("저장할 학번을 입력하세요.");
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("setuk_drafts")
       .insert(
         results.map((r) => ({
@@ -95,8 +96,13 @@ export default function Home() {
           reviewed_text: r.reviewed,
           review_notes: r.notes,
         })),
-      );
-    error ? setMsg(error.message) : toastMsg("Supabase에 저장했습니다.");
+      )
+      .select("*");
+    if (error) setMsg(error.message);
+    else {
+      setHistory((previous) => [...(data as SavedDraft[]), ...previous]);
+      toastMsg("Supabase에 저장했습니다.");
+    }
   }
   async function load() {
     setView("history");
@@ -121,7 +127,7 @@ export default function Home() {
     error ? setMsg(error.message) : toastMsg("수정 내용을 저장했습니다.");
   }
   return (
-    <main className="hp-shell">
+    <main className={`${styles.shell} hp-shell`}>
       <div className="utility">세특 메이커</div>
       <div className="app-layout">
         <aside className="left-menu">
